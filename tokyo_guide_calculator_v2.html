@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tokyo Honest Guide — Funnel Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #171717;
+    --border: #2a2a2a;
+    --accent: #e8c547;
+    --accent2: #ff6b35;
+    --text: #f0ede8;
+    --muted: #888;
+    --green: #4ade80;
+    --blue: #60a5fa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; padding: 40px 20px; }
+
+  header { text-align: center; margin-bottom: 48px; }
+  header .tag { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 12px; }
+  header h1 { font-size: clamp(26px, 5vw, 44px); font-weight: 800; line-height: 1.1; }
+  header h1 span { color: var(--accent); }
+  header p { color: var(--muted); margin-top: 12px; font-size: 13px; font-family: 'DM Mono', monospace; }
+
+  .section-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; max-width: 960px; margin-left: auto; margin-right: auto; }
+
+  /* Monthly stats bar */
+  .monthly-stats { max-width: 960px; margin: 0 auto 36px; }
+  .month-bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  @media(max-width:580px){ .month-bars { grid-template-columns: repeat(2,1fr); } }
+
+  .mbar-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .mbar-name { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); margin-bottom: 4px; }
+  .mbar-avg { font-size: 24px; font-weight: 800; color: var(--accent); }
+  .mbar-total { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); margin-top: 2px; }
+  .mbar-bar { height: 4px; border-radius: 2px; background: var(--accent); margin-top: 10px; opacity: 0.6; }
+
+  /* Scenario selector */
+  .scenario-wrap { max-width: 960px; margin: 0 auto 28px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .scen-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+  .scen-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,197,71,0.07); }
+
+  /* Month selector */
+  .month-selector { max-width: 960px; margin: 0 auto 28px; }
+  .month-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .mtab { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+  .mtab.active { border-color: var(--blue); color: var(--blue); background: rgba(96,165,250,0.07); }
+
+  /* Rate sliders */
+  .sliders-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; max-width: 960px; margin: 0 auto 32px; }
+  @media(max-width:620px){ .sliders-grid { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .card label { display: block; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+  .slider-val { font-size: 26px; font-weight: 800; color: var(--accent); margin-bottom: 6px; }
+  input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--border); cursor: pointer; accent-color: var(--accent); }
+
+  /* Funnel */
+  .funnel-section { max-width: 960px; margin: 0 auto 28px; }
+  .funnel-steps { display: flex; flex-direction: column; gap: 4px; }
+  .step { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; position: relative; overflow: hidden; }
+  .step-bar { position: absolute; left:0; top:0; bottom:0; border-radius: 12px 0 0 12px; opacity: 0.07; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+  .step.s1 .step-bar { background: var(--text); }
+  .step.s2 .step-bar { background: var(--accent); }
+  .step.s3 .step-bar { background: var(--accent2); }
+  .step.s4 .step-bar { background: var(--green); }
+  .step-icon { font-size: 20px; width: 32px; text-align: center; flex-shrink:0; position:relative; }
+  .step-info { flex:1; position:relative; }
+  .step-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .step-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+  .step-num { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 500; position:relative; flex-shrink:0; text-align:right; min-width: 80px; }
+  .step.s1 .step-num { color: var(--text); }
+  .step.s2 .step-num { color: var(--accent); }
+  .step.s3 .step-num { color: var(--accent2); }
+  .step.s4 .step-num { color: var(--green); }
+  .arrow { text-align:center; color: var(--border); font-size:16px; }
+
+  /* Revenue */
+  .rev-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; max-width: 960px; margin: 0 auto 32px; }
+  @media(max-width:580px){ .rev-grid { grid-template-columns:1fr; } }
+  .rev-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; text-align:center; }
+  .rev-card.highlight { border-color: var(--accent); background: rgba(232,197,71,0.05); }
+  .rev-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+  .rev-amount { font-size: 30px; font-weight: 800; }
+  .rev-card:not(.highlight) .rev-amount { color: var(--text); }
+  .rev-card.highlight .rev-amount { color: var(--accent); }
+  .rev-period { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  /* Table */
+  .table-section { max-width: 960px; margin: 0 auto 32px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: 'DM Mono', monospace; font-size: 12px; }
+  th { text-align:left; padding: 10px 12px; color: var(--muted); border-bottom: 1px solid var(--border); font-weight:400; font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+  td { padding: 11px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  td.revenue { color: var(--green); font-weight:500; }
+  td.purchases { color: var(--accent2); }
+  td.highlight-row { color: var(--accent); font-weight: 700; }
+
+  .note { max-width:960px; margin: 20px auto 0; font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); line-height:1.9; border-top:1px solid var(--border); padding-top:18px; }
+  .fixed-badge { font-family:'DM Mono',monospace; font-size:12px; color:var(--accent2); background:rgba(255,107,53,0.1); border:1px solid rgba(255,107,53,0.3); border-radius:6px; padding:4px 10px; display:inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tag">ManyChat × Instagram — Real Data</div>
+  <h1>Tokyo Honest Guide<br><span>Funnel Calculator</span></h1>
+  <p>Based on your actual 2025 follower data (Jan – May 14)</p>
+</header>
+
+<!-- Monthly Stats -->
+<div class="monthly-stats">
+  <div class="section-label" style="margin-bottom:14px">📅 Your Follower Data by Month</div>
+  <div class="month-bars" id="monthBars"></div>
+</div>
+
+<!-- Scenario -->
+<div class="scenario-wrap">
+  <div class="section-label" style="margin-bottom:0;align-self:center">Scenario:</div>
+  <button class="scen-btn" onclick="setScenario('conservative')">🐢 Conservative</button>
+  <button class="scen-btn active" onclick="setScenario('realistic')">📊 Realistic</button>
+  <button class="scen-btn" onclick="setScenario('optimistic')">🚀 Optimistic</button>
+</div>
+
+<!-- Month selector -->
+<div class="month-selector">
+  <div class="section-label">Base Followers On:</div>
+  <div class="month-tabs">
+    <button class="mtab" onclick="setMonth('Jan',172.8)">Jan avg</button>
+    <button class="mtab" onclick="setMonth('Feb',785.8)">Feb avg</button>
+    <button class="mtab" onclick="setMonth('Mar',429.3)">Mar avg</button>
+    <button class="mtab" onclick="setMonth('Apr',836.3)">Apr avg</button>
+    <button class="mtab active" onclick="setMonth('May',557.4)">May avg</button>
+    <button class="mtab" onclick="setMonth('Overall',548.9)">Overall avg</button>
+  </div>
+</div>
+
+<!-- Sliders -->
+<div class="sliders-grid">
+  <div class="card">
+    <label>DM Open Rate</label>
+    <div class="slider-val" id="openVal">70%</div>
+    <input type="range" id="openRate" min="10" max="100" value="70" oninput="calc()">
+  </div>
+  <div class="card">
+    <label>Free Guide Opt-in</label>
+    <div class="slider-val" id="optinVal">60%</div>
+    <input type="range" id="optinRate" min="5" max="100" value="60" oninput="calc()">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px;">of DM openers</div>
+  </div>
+  <div class="card">
+    <label>Paid Conversion</label>
+    <div class="slider-val" id="convVal">10%</div>
+    <input type="range" id="convRate" min="1" max="50" value="10" oninput="calc()">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px;">of free guide recipients</div>
+  </div>
+</div>
+
+<!-- Funnel -->
+<div class="funnel-section">
+  <div class="section-label">📊 Daily Funnel (based on selected avg)</div>
+  <div class="funnel-steps">
+    <div class="step s1">
+      <div class="step-bar" style="width:100%"></div>
+      <div class="step-icon">👤</div>
+      <div class="step-info"><div class="step-name">New Followers / Day</div><div class="step-sub">Welcome DM triggered</div></div>
+      <div class="step-num" id="n1">—</div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="step s2">
+      <div class="step-bar" id="bar2"></div>
+      <div class="step-icon">💬</div>
+      <div class="step-info"><div class="step-name">DM Opened</div><div class="step-sub">Saw the free guide offer</div></div>
+      <div class="step-num" id="n2">—</div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="step s3">
+      <div class="step-bar" id="bar3"></div>
+      <div class="step-icon">📖</div>
+      <div class="step-info"><div class="step-name">Free Guide Received</div><div class="step-sub">Got guide + 50% coupon</div></div>
+      <div class="step-num" id="n3">—</div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="step s4">
+      <div class="step-bar" id="bar4"></div>
+      <div class="step-icon">💳</div>
+      <div class="step-info"><div class="step-name">Paid Guide Purchased</div><div class="step-sub">Converted at $24.50</div></div>
+      <div class="step-num" id="n4">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- Revenue -->
+<div class="rev-grid">
+  <div class="rev-card">
+    <div class="rev-label">Daily Revenue</div>
+    <div class="rev-amount" id="revDay">—</div>
+    <div class="rev-period">per day</div>
+  </div>
+  <div class="rev-card">
+    <div class="rev-label">Monthly Revenue</div>
+    <div class="rev-amount" id="revMonth">—</div>
+    <div class="rev-period">× 30 days</div>
+  </div>
+  <div class="rev-card highlight">
+    <div class="rev-label">Annual Revenue</div>
+    <div class="rev-amount" id="revYear">—</div>
+    <div class="rev-period">× 365 days</div>
+  </div>
+</div>
+
+<!-- Monthly breakdown table -->
+<div class="table-section">
+  <div class="section-label">📅 Your Actual Months — Projected</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Month</th>
+        <th>Total Followers</th>
+        <th>Avg/Day</th>
+        <th>Free Guide</th>
+        <th>Purchases</th>
+        <th>Revenue</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<div class="note">
+  Pricing: Original $49.00 &nbsp;|&nbsp; Follower discount 50% OFF → <strong style="color:var(--accent2)">$24.50</strong><br>
+  DM open rate benchmark: 60–80% &nbsp;|&nbsp; Free guide opt-in benchmark: 40–70% &nbsp;|&nbsp; Paid conversion benchmark: 5–15%<br>
+  Feb & Apr spikes likely from viral reels — conservative scenario recommended for planning.
+</div>
+
+<script>
+const monthData = [
+  { name: 'Jan', days: 31, total: 5356,  avg: 172.8 },
+  { name: 'Feb', days: 28, total: 22001, avg: 785.8 },
+  { name: 'Mar', days: 31, total: 13308, avg: 429.3 },
+  { name: 'Apr', days: 30, total: 25089, avg: 836.3 },
+  { name: 'May', days: 14, total: 7803,  avg: 557.4, partial: true },
+];
+
+const scenarios = {
+  conservative: { open: 55, optin: 40, conv: 5  },
+  realistic:    { open: 70, optin: 60, conv: 10 },
+  optimistic:   { open: 85, optin: 75, conv: 18 },
+};
+
+let currentFollowers = 557.4;
+let currentMonth = 'May';
+
+// Build month bars
+const maxAvg = Math.max(...monthData.map(m => m.avg));
+const barsEl = document.getElementById('monthBars');
+monthData.forEach(m => {
+  const pct = Math.round((m.avg / maxAvg) * 100);
+  barsEl.innerHTML += `
+    <div class="mbar-card">
+      <div class="mbar-name">${m.name}${m.partial ? ' (partial)' : ''}</div>
+      <div class="mbar-avg">${m.avg.toLocaleString()}</div>
+      <div class="mbar-total">${m.total.toLocaleString()} total</div>
+      <div class="mbar-bar" style="width:${pct}%"></div>
+    </div>`;
+});
+
+function setScenario(name) {
+  document.querySelectorAll('.scen-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  const s = scenarios[name];
+  document.getElementById('openRate').value  = s.open;
+  document.getElementById('optinRate').value = s.optin;
+  document.getElementById('convRate').value  = s.conv;
+  calc();
+}
+
+function setMonth(name, avg) {
+  document.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  currentFollowers = avg;
+  currentMonth = name;
+  calc();
+}
+
+function fmt(n)  { return Math.round(n).toLocaleString(); }
+function usd(n)  { return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+function calc() {
+  const or  = parseFloat(document.getElementById('openRate').value)  / 100;
+  const opr = parseFloat(document.getElementById('optinRate').value) / 100;
+  const cr  = parseFloat(document.getElementById('convRate').value)  / 100;
+
+  document.getElementById('openVal').textContent  = Math.round(or*100)  + '%';
+  document.getElementById('optinVal').textContent = Math.round(opr*100) + '%';
+  document.getElementById('convVal').textContent  = Math.round(cr*100)  + '%';
+
+  const f        = currentFollowers;
+  const opened   = f * or;
+  const freeguide = opened * opr;
+  const purchases = freeguide * cr;
+  const revenue   = purchases * 24.5;
+
+  document.getElementById('n1').textContent = fmt(f);
+  document.getElementById('n2').textContent = fmt(opened);
+  document.getElementById('n3').textContent = fmt(freeguide);
+  document.getElementById('n4').textContent = fmt(purchases);
+
+  document.getElementById('bar2').style.width = (or * 100) + '%';
+  document.getElementById('bar3').style.width = (or * opr * 100) + '%';
+  document.getElementById('bar4').style.width = (or * opr * cr * 100) + '%';
+
+  document.getElementById('revDay').textContent   = usd(revenue);
+  document.getElementById('revMonth').textContent = usd(revenue * 30);
+  document.getElementById('revYear').textContent  = usd(revenue * 365);
+
+  // Table: actual months
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  let totalPurchases = 0, totalRevenue = 0;
+
+  monthData.forEach(m => {
+    const mg = m.avg * or * opr;
+    const mp = mg * cr;
+    const mr = mp * m.days * 24.5;
+    totalPurchases += mp * m.days;
+    totalRevenue   += mr;
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${m.name}${m.partial ? ' *' : ''}</td>
+        <td>${m.total.toLocaleString()}</td>
+        <td>${m.avg.toFixed(0)}</td>
+        <td>${fmt(mg * m.days)}</td>
+        <td class="purchases">${fmt(mp * m.days)}</td>
+        <td class="revenue">${usd(mr)}</td>
+      </tr>`;
+  });
+
+  tbody.innerHTML += `
+    <tr>
+      <td class="highlight-row">TOTAL (Jan–May)</td>
+      <td class="highlight-row">73,557</td>
+      <td class="highlight-row">548.9</td>
+      <td></td>
+      <td class="purchases highlight-row">${fmt(totalPurchases)}</td>
+      <td class="revenue highlight-row">${usd(totalRevenue)}</td>
+    </tr>`;
+}
+
+calc();
+</script>
+</body>
+</html>
